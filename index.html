@@ -1,1 +1,75 @@
-Index.html 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Hub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>🎬 Movie Hub</h1>
+
+  <div class="top-controls">
+      <input id="searchInput" type="text" placeholder="Search movies...">
+      <button id="themeToggle">🌙</button>
+
+      <select id="colorTheme">
+        <option value="">Theme Color</option>
+        <option value="sunset">Sunset</option>
+        <option value="ocean">Ocean</option>
+        <option value="neo">Neo</option>
+      </select>
+  </div>
+
+  <div id="suggestions" class="suggestions hidden"></div>
+
+  <nav class="sections">
+    <button class="sec-btn active" data-sec="popular">Popular</button>
+    <button class="sec-btn" data-sec="top_rated">Top Rated</button>
+    <button class="sec-btn" data-sec="now_playing">Now Playing</button>
+    <button class="sec-btn" data-sec="trending">Trending</button>
+  </nav>
+</header>
+
+<div id="loader" class="loader hidden"></div>
+
+<div id="moviesGrid" class="grid"></div>
+
+<div class="pagination">
+  <button id="prevPage">Prev</button>
+  <span id="pageInfo">Page 1 of 1</span>
+  <button id="nextPage">Next</button>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <span id="modalClose" class="modal-close">&times;</span>
+
+    <div class="modal-header">
+      <img id="modalPoster" class="modal-poster">
+      <div>
+        <h2 id="modalTitle"></h2>
+        <p id="modalSub" class="muted"></p>
+      </div>
+    </div>
+
+    <p id="modalOverview"></p>
+
+    <h3>Cast</h3>
+    <div id="modalCast" class="cast-grid"></div>
+
+    <h3>Trailers</h3>
+    <div id="modalVideos" class="video-grid"></div>
+
+    <h3>Download Links</h3>
+    <div id="modalDownload"></div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
