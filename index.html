@@ -8,68 +8,56 @@
 </head>
 <body>
 
-<header>
-  <h1>🎬 Movie Hub</h1>
+  <header>
+    <h1>Movie Hub</h1>
+    <input type="text" id="searchInput" placeholder="Search movies...">
+  </header>
 
-  <div class="top-controls">
-      <input id="searchInput" type="text" placeholder="Search movies...">
-      <button id="themeToggle">🌙</button>
-
-      <select id="colorTheme">
-        <option value="">Theme Color</option>
-        <option value="sunset">Sunset</option>
-        <option value="ocean">Ocean</option>
-        <option value="neo">Neo</option>
-      </select>
-  </div>
-
-  <div id="suggestions" class="suggestions hidden"></div>
-
-  <nav class="sections">
-    <button class="sec-btn active" data-sec="popular">Popular</button>
-    <button class="sec-btn" data-sec="top_rated">Top Rated</button>
-    <button class="sec-btn" data-sec="now_playing">Now Playing</button>
-    <button class="sec-btn" data-sec="trending">Trending</button>
+  <nav>
+    <button class="sec-btn" data-section="popular">Popular</button>
+    <button class="sec-btn" data-section="trending">Trending</button>
+    <button class="sec-btn" data-section="now_playing">Now Playing</button>
+    <button class="sec-btn" data-section="top_rated">Top Rated</button>
   </nav>
-</header>
 
-<div id="loader" class="loader hidden"></div>
+  <main>
+    <div id="continueWatch" class="continue-section hidden"></div>
 
-<div id="moviesGrid" class="grid"></div>
+    <div id="moviesGrid" class="grid"></div>
 
-<div class="pagination">
-  <button id="prevPage">Prev</button>
-  <span id="pageInfo">Page 1 of 1</span>
-  <button id="nextPage">Next</button>
-</div>
+    <div id="loader" class="hidden loader">Loading...</div>
 
-<!-- Modal -->
-<div id="modal" class="modal hidden">
-  <div class="modal-content">
-    <span id="modalClose" class="modal-close">&times;</span>
-
-    <div class="modal-header">
-      <img id="modalPoster" class="modal-poster">
-      <div>
-        <h2 id="modalTitle"></h2>
-        <p id="modalSub" class="muted"></p>
-      </div>
+    <div class="pagination">
+      <button id="prevPage">Prev</button>
+      <span id="pageInfo">Page 1</span>
+      <button id="nextPage">Next</button>
     </div>
+  </main>
 
-    <p id="modalOverview"></p>
+  <!-- Modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="modalClose" class="close">&times;</span>
 
-    <h3>Cast</h3>
-    <div id="modalCast" class="cast-grid"></div>
+      <img id="modalPoster" class="modal-poster"/>
 
-    <h3>Trailers</h3>
-    <div id="modalVideos" class="video-grid"></div>
+      <h2 id="modalTitle"></h2>
+      <p id="modalOverview"></p>
 
-    <h3>Download Links</h3>
-    <div id="modalDownload"></div>
+      <h3>Cast</h3>
+      <div id="modalCast"></div>
 
+      <h3>Trailer</h3>
+      <div id="modalVideos"></div>
+
+      <h3>Stream</h3>
+      <div id="modalPlayerWrap"></div>
+
+      <h3>Download</h3>
+      <div id="modalSub"></div>
+    </div>
   </div>
-</div>
 
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
