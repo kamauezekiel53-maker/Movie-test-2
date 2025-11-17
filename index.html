@@ -1,63 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Movie Hub</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MovieHub — GiftedTech Only</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <header>
-    <h1>Movie Hub</h1>
-    <input type="text" id="searchInput" placeholder="Search movies...">
+  <header class="topbar">
+    <div class="brand">🎬 MovieHub</div>
+    <div class="search-row">
+      <input id="searchInput" placeholder="Search movies, shows, anime..." autocomplete="off">
+      <button id="searchBtn">Search</button>
+    </div>
   </header>
 
-  <nav>
-    <button class="sec-btn" data-section="popular">Popular</button>
-    <button class="sec-btn" data-section="trending">Trending</button>
-    <button class="sec-btn" data-section="now_playing">Now Playing</button>
-    <button class="sec-btn" data-section="top_rated">Top Rated</button>
-  </nav>
+  <main class="container">
+    <div id="loader" class="loader hidden" aria-hidden="true"></div>
 
-  <main>
-    <div id="continueWatch" class="continue-section hidden"></div>
-
-    <div id="moviesGrid" class="grid"></div>
-
-    <div id="loader" class="hidden loader">Loading...</div>
+    <section id="resultsGrid" class="grid" aria-live="polite"></section>
 
     <div class="pagination">
-      <button id="prevPage">Prev</button>
+      <button id="prevPage" class="btn">Prev</button>
       <span id="pageInfo">Page 1</span>
-      <button id="nextPage">Next</button>
+      <button id="nextPage" class="btn">Next</button>
     </div>
   </main>
 
-  <!-- Modal -->
-  <div id="modal" class="modal hidden">
-    <div class="modal-content">
-      <span id="modalClose" class="close">&times;</span>
+  <!-- DETAILS / STREAM MODAL -->
+  <div id="modal" class="modal hidden" role="dialog" aria-hidden="true">
+    <div class="modal-card">
+      <button id="modalClose" class="modal-close" aria-label="Close">✕</button>
 
-      <img id="modalPoster" class="modal-poster"/>
+      <div class="modal-inner">
+        <div class="modal-left">
+          <img id="modalPoster" alt="poster" class="modal-poster">
+          <div id="metaRow" class="meta-row">
+            <h2 id="modalTitle"></h2>
+            <div id="modalYear" class="year muted"></div>
+          </div>
+        </div>
 
-      <h2 id="modalTitle"></h2>
-      <p id="modalOverview"></p>
+        <div class="modal-right">
+          <h3>Stream</h3>
+          <div id="playerWrap" class="player-wrap">Loading stream...</div>
 
-      <h3>Cast</h3>
-      <div id="modalCast"></div>
+          <h3>Downloads</h3>
+          <div id="downloadList" class="download-list">Loading links...</div>
 
-      <h3>Trailer</h3>
-      <div id="modalVideos"></div>
+          <h3>Subtitles</h3>
+          <div id="subtitleList" class="subtitle-list">Loading subtitles...</div>
 
-      <h3>Stream</h3>
-      <div id="modalPlayerWrap"></div>
-
-      <h3>Download</h3>
-      <div id="modalSub"></div>
+          <div class="modal-actions">
+            <a id="openInNewTab" class="btn outline" target="_blank" rel="noopener">Open Stream in New Tab</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+<script src="app.js" defer></script>
 </body>
 </html>
