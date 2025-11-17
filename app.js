@@ -1,147 +1,235 @@
-const TMDB_KEY = "7cc9abef50e4c94689f48516718607be";
-let currentSection = "popular";
-let currentPage = 1;
-const moviesGrid = document.getElementById("moviesGrid");
-const loader = document.getElementById("loader");
-const searchInput = document.getElementById("searchInput");
+/* MovieHub — GiftedTech only
+   Search -> getById -> stream / downloads / subtitles
+*/
 
-// Modal elements
-const modal = document.getElementById("modal");
-const modalTitle = document.getElementById("modalTitle");
-const modalPoster = document.getElementById("modalPoster");
-const modalOverview = document.getElementById("modalOverview");
-const modalCast = document.getElementById("modalCast");
-const modalVideos = document.getElementById("modalVideos");
-const modalPlayerWrap = document.getElementById("modalPlayerWrap");
-const modalSub = document.getElementById("modalSub");
+const GIFT_SEARCH = 'https://movieapi.giftedtech.co.ke/api/search?query=';
+const GIFT_GET = 'https://movieapi.giftedtech.co.ke/api/getById?id=';
 
-// Close modal
-document.getElementById("modalClose").onclick = () => {
-  modal.classList.add("hidden");
-  modalPlayerWrap.innerHTML = "";
-};
+const resultsGrid = document.getElementById('resultsGrid');
+const loader = document.getElementById('loader');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const prevBtn = document.getElementById('prevPage');
+const nextBtn = document.getElementById('nextPage');
+const pageInfo = document.getElementById('pageInfo');
 
-// Fetch TMDB movies
-async function loadMovies() {
-  loader.classList.remove("hidden");
-  moviesGrid.innerHTML = "";
+const modal = document.getElementById('modal');
+const modalClose = document.getElementById('modalClose');
+const modalPoster = document.getElementById('modalPoster');
+const modalTitle = document.getElementById('modalTitle');
+const modalYear = document.getElementById('modalYear');
+const playerWrap = document.getElementById('playerWrap');
+const downloadList = document.getElementById('downloadList');
+const subtitleList = document.getElementById('subtitleList');
+const openInNewTab = document.getElementById('openInNewTab');
 
-  let url = `https://api.themoviedb.org/3/movie/${currentSection}?api_key=${TMDB_KEY}&page=${currentPage}`;
+let state = { query: '', page: 1, perPage: 20, lastResults: [] };
 
-  let res = await fetch(url);
-  let data = await res.json();
+/* helpers */
+function showLoader(){ loader.classList.remove('hidden'); }
+function hideLoader(){ loader.classList.add('hidden'); }
 
-  data.results.forEach(m => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <img src="https://image.tmdb.org/t/p/w500${m.poster_path}">
-      <div class="card-body">${m.title}</div>
+function safeText(s){ return String(s ?? '').trim(); }
+
+function renderResults(list){
+  resultsGrid.innerHTML = '';
+  if(!list || list.length === 0){
+    resultsGrid.innerHTML = `<p class="muted">No results found.</p>`;
+    return;
+  }
+  list.forEach(item=>{
+    // GiftedTech search item commonly contains { title, poster, year, movieid }
+    const title = safeText(item.title || item.name || '');
+    const poster = safeText(item.poster || item.image || '');
+    const year = safeText(item.year || item.y || '');
+    const id = safeText(item.movieid || item.id || item._id);
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.id = id;
+    el.innerHTML = `
+      <img src="${poster}" alt="${title}">
+      <div class="title">${title}</div>
+      <div class="meta muted">${year}</div>
     `;
-    card.onclick = () => openModal(m.id);
-    moviesGrid.appendChild(card);
+    el.addEventListener('click', ()=> showDetails(id));
+    resultsGrid.appendChild(el);
   });
-
-  loader.classList.add("hidden");
 }
 
-loadMovies();
+/* search -> Gift search endpoint */
+async function doSearch(query){
+  try{
+    showLoader();
+    const res = await fetch(GIFT_SEARCH + encodeURIComponent(query));
+    const j = await res.json();
+    // some API variants return results in j.results or j.data
+    const results = j.results || j.data || (Array.isArray(j) ? j : []);
+    state.lastResults = results;
+    state.page = 1;
+    renderResults(results.slice(0, state.perPage));
+    pageInfo.textContent = `Showing ${Math.min(results.length, state.perPage)} of ${results.length}`;
+  }catch(e){
+    console.error(e);
+    resultsGrid.innerHTML = `<p class="muted">Search failed.</p>`;
+  }finally{ hideLoader(); }
+}
 
-// Section buttons
-document.querySelectorAll(".sec-btn").forEach(btn => {
-  btn.onclick = () => {
-    currentSection = btn.dataset.section;
-    currentPage = 1;
-    loadMovies();
-  };
+/* details -> getById */
+async function showDetails(movieId){
+  if(!movieId){
+    alert('Missing id');
+    return;
+  }
+
+  modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+
+  // reset UI
+  modalPoster.src = '';
+  modalTitle.textContent = 'Loading...';
+  modalYear.textContent = '';
+  playerWrap.innerHTML = 'Loading stream...';
+  downloadList.innerHTML = 'Loading links...';
+  subtitleList.innerHTML = 'Loading subtitles...';
+  openInNewTab.href = '#';
+
+  try{
+    const r = await fetch(GIFT_GET + encodeURIComponent(movieId));
+    const j = await r.json();
+
+    // GiftedTech getById structure: contains results[] (sources) and subtitles[]
+    // Some variants use fields: sources, results, tracks, etc. We handle a few possibilities.
+    const sources = j.results || j.sources || j.data || [];
+    const subs = j.subtitles || j.subs || [];
+
+    // If the search result had poster/title, try show it (lookup in lastResults)
+    const sr = state.lastResults.find(x => (x.movieid || x.id || x._id) == movieId);
+    if(sr){
+      modalPoster.src = sr.poster || sr.image || '';
+      modalTitle.textContent = sr.title || sr.name || '';
+      modalYear.textContent = sr.year || '';
+    } else {
+      modalPoster.src = j.poster || '';
+      modalTitle.textContent = j.title || j.name || ('Movie ' + movieId);
+      modalYear.textContent = j.year || '';
+    }
+
+    // normalize sources: earlier samples used objects with quality, download_url, stream_url, size
+    const normalized = (sources || []).map(s => ({
+      quality: s.quality || s.q || s.label || 'Link',
+      download_url: s.download_url || s.download || s.url || s.link,
+      stream_url: s.stream_url || s.stream || s.url || s.link,
+      size: s.size || s.filesize || s.size_bytes || s.bytes,
+      raw: s
+    })).filter(x => x.download_url || x.stream_url);
+
+    if(normalized.length === 0){
+      playerWrap.innerHTML = '<p class="muted">No streams available.</p>';
+      downloadList.innerHTML = '<p class="muted">No downloads available.</p>';
+      subtitleList.innerHTML = '<p class="muted">No subtitles available.</p>';
+      openInNewTab.href = '#';
+      return;
+    }
+
+    // pick best stream: prefer 1080p, 720p, else first
+    const best = normalized.find(s => (s.quality||'').includes('1080')) ||
+                 normalized.find(s => (s.quality||'').includes('720')) ||
+                 normalized[0];
+
+    // build HTML5 video player; attempt to attach subtitles as <track>
+    const video = document.createElement('video');
+    video.controls = true;
+    video.autoplay = true;
+    video.style.width = '100%';
+    video.style.borderRadius = '8px';
+    video.setAttribute('playsinline', '');
+    const src = document.createElement('source');
+    src.src = best.stream_url || best.download_url;
+    // no reliable type info — assume mp4
+    src.type = 'video/mp4';
+    video.appendChild(src);
+
+    // attach subtitle tracks (if urls are direct .vtt/.srt; browsers prefer VTT)
+    (subs || []).forEach(s => {
+      if(!s.url) return;
+      const tr = document.createElement('track');
+      tr.kind = 'subtitles';
+      tr.label = s.lanName || s.lan || 'Sub';
+      tr.srclang = (s.lan && s.lan.split('_')[0]) || 'en';
+      tr.src = s.url;
+      video.appendChild(tr);
+    });
+
+    // handle playback error -> show fallback open link
+    video.addEventListener('error', ()=> {
+      playerWrap.innerHTML = `<p class="muted">Playback blocked or unsupported by this server. You can open the stream in a new tab.</p>
+      <a class="btn outline" href="${best.stream_url||best.download_url}" target="_blank" rel="noopener">Open Stream</a>`;
+      openInNewTab.href = best.stream_url || best.download_url || '#';
+    });
+
+    // replace playerWrap
+    playerWrap.innerHTML = '';
+    playerWrap.appendChild(video);
+    openInNewTab.href = best.stream_url || best.download_url || '#';
+
+    // downloads list
+    downloadList.innerHTML = normalized.map(s => {
+      const sizeText = s.size ? (isNaN(s.size) ? s.size : ((Number(s.size)/1024/1024).toFixed(1) + ' MB')) : 'Unknown size';
+      return `<a class="btn" href="${s.download_url || s.stream_url}" target="_blank" rel="noopener">${s.quality} · ${sizeText}</a>`;
+    }).join('');
+
+    // subtitles
+    subtitleList.innerHTML = (subs.length ? subs.map(sub => {
+      const label = sub.lanName || sub.lan || 'Subtitle';
+      return `<a class="btn outline" href="${sub.url}" target="_blank" rel="noopener">${label}</a>`;
+    }).join('') : '<p class="muted">No subtitles found.</p>');
+
+  }catch(err){
+    console.error(err);
+    playerWrap.innerHTML = '<p class="muted">Failed to load stream data.</p>';
+    downloadList.innerHTML = '<p class="muted">Failed to load download links.</p>';
+    subtitleList.innerHTML = '<p class="muted">Failed to load subtitles.</p>';
+  }
+}
+
+/* modal close */
+modalClose.addEventListener('click', ()=> {
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+  playerWrap.innerHTML = '';
+});
+modal.addEventListener('click', e => { if(e.target === modal){ modal.classList.add('hidden'); document.body.style.overflow = ''; playerWrap.innerHTML = ''; } });
+
+/* search handlers (debounced) */
+let searchTimer = null;
+searchInput.addEventListener('input', e => {
+  const q = e.target.value.trim();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=> {
+    if(!q) { resultsGrid.innerHTML = ''; pageInfo.textContent = ''; return; }
+    doSearch(q);
+  }, 300);
+});
+searchBtn?.addEventListener('click', ()=> {
+  const q = searchInput.value.trim();
+  if(q) doSearch(q);
 });
 
-// Search
-searchInput.onkeyup = async (e) => {
-  if (e.key === "Enter") {
-    let q = searchInput.value.trim();
-    if (!q) return;
-
-    let url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${q}`;
-    let res = await fetch(url);
-    let data = await res.json();
-
-    moviesGrid.innerHTML = "";
-    data.results.forEach(m => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}">
-        <div class="card-body">${m.title}</div>
-      `;
-      card.onclick = () => openModal(m.id);
-      moviesGrid.appendChild(card);
-    });
-  }
-};
-
-// Modal open
-async function openModal(id) {
-  modal.classList.remove("hidden");
-
-  // Movie details
-  let res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_KEY}&append_to_response=videos,credits`);
-  let m = await res.json();
-
-  modalTitle.textContent = m.title;
-  modalPoster.src = `https://image.tmdb.org/t/p/w500${m.poster_path}`;
-  modalOverview.textContent = m.overview;
-
-  // Cast
-  modalCast.innerHTML = m.credits.cast.slice(0, 6).map(c => c.name).join(", ");
-
-  // Trailer
-  let yt = m.videos.results.find(v => v.type === "Trailer" && v.site === "YouTube");
-  modalVideos.innerHTML = yt ?
-    `<iframe width="100%" height="200" src="https://www.youtube.com/embed/${yt.key}" frameborder="0" allowfullscreen></iframe>`
-    : "No trailer available";
-
-  // GiftedTech streaming
-  loadGiftedTech(id);
+async function doSearch(q){
+  try{
+    showLoader();
+    const res = await fetch(GIFT_SEARCH + encodeURIComponent(q));
+    const j = await res.json();
+    const results = j.results || j.data || (Array.isArray(j) ? j : []);
+    // keep results in state (for potential details)
+    state.lastResults = results;
+    renderResults(results);
+    pageInfo.textContent = `Found ${results.length} results`;
+  }catch(e){
+    console.error(e);
+    resultsGrid.innerHTML = '<p class="muted">Search failed.</p>';
+  }finally{ hideLoader(); }
 }
 
-// GiftedTech API
-async function loadGiftedTech(tmdbId) {
-  modalPlayerWrap.innerHTML = "Loading sources...";
-  modalSub.innerHTML = "";
-
-  try {
-    let res = await fetch(`https://movieapi.giftedtech.co.ke/api/movie/${tmdbId}`);
-    let data = await res.json();
-
-    modalPlayerWrap.innerHTML = "";
-
-    data.sources.forEach(src => {
-      let btn = document.createElement("button");
-      btn.className = "stream-btn";
-      btn.textContent = src.quality + " Stream";
-      btn.onclick = () => playStream(src.url);
-      modalPlayerWrap.appendChild(btn);
-    });
-
-    data.downloads.forEach(dl => {
-      let a = document.createElement("a");
-      a.href = dl.url;
-      a.className = "download-btn";
-      a.textContent = dl.quality + " Download";
-      a.target = "_blank";
-      modalSub.appendChild(a);
-    });
-  } catch {
-    modalPlayerWrap.innerHTML = "No streaming available";
-  }
-}
-
-// Play video in modal
-function playStream(url) {
-  modalPlayerWrap.innerHTML = `
-    <video width="100%" controls autoplay>
-      <source src="${url}">
-    </video>
-  `;
-}
+/* initial demo: optional popular list using "popular" keyword search */
+doSearch('popular');
